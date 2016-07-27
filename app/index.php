@@ -44,6 +44,11 @@ $app->before(function (Request $request) {
 
         return $response;
     }
+
+    if (0 === strpos($request->headers->get('Content-Type'), 'application/json')) {
+        $data = json_decode($request->getContent(), true);
+        $request->request->replace(is_array($data) ? $data : array());
+    }
 });
 
 $app->get('/', function () {
@@ -120,15 +125,77 @@ $app->delete('/users/{id}', function ($id) use ($dic) {
 
 $app->post('/users', function (Request $request) use ($dic) {
     $response = new Response();
-    $response->setStatusCode(501);
+    $repo = $dic['repo-mem'];
+    $email = $request->get('email');
+    $name = $request->get('name');
+    $username = $request->get('username');
+
+    if(empty($email) || $email == "") {
+        $response->setStatusCode(400);
+        return $response;
+    }
+    elseif(empty($name) || $name == "") {
+        $response->setStatusCode(400);
+        return $response;
+    }
+    elseif(empty($username) || $username == "") {
+        $response->setStatusCode(400);
+        return $response;
+    }
+
+    $newUser = new User(new StringLiteral($email), new StringLiteral($name),
+        new StringLiteral($username));
+    $newUser->setId(new StringLiteral('4'));
+
+    $repo->add($newUser);
+    $response->setStatusCode(201);
 
     return $response;
 });
 
 $app->put('/users/{id}', function ($id, Request $request) use ($dic) {
     $response = new Response();
-    $response->setStatusCode(501);
+    $repo = $dic['repo-mem'];
 
+    $user = $repo->findById(new StringLiteral($id));
+
+    if(empty($user) || $user == null) {
+        $response->setStatusCode(400);
+        return $response;
+    }
+
+    if(!empty($request->get('email'))) {
+        $email = new StringLiteral($request->get('email'));
+        $name = $user->getName();
+        $username = $user->getUsername();
+        $newUser = new User($email,$name, $username);
+        $newUser->setId($user->getId());
+        $user = $newUser;
+        $repo->update($user);
+    }
+    elseif(!empty($request->get('name'))) {
+        $email = $user->getEmail();
+        $name = new StringLiteral($request->get('name'));
+        $username = $user->getUsername();
+        $newUser = new User($email,$name, $username);
+        $newUser->setId($user->getId());
+        $user = $newUser;
+        $repo->update($user);
+    }
+    elseif(!empty($request->get('username'))) {
+        $email = $user->getEmail();
+        $name = $user->getName();
+        $username = new StringLiteral($request->get('username'));
+        $newUser = new User($email,$name, $username);
+        $newUser->setId($user->getId());
+        $user = $newUser;
+        $repo->update($user);
+    }
+    else{
+        $response->setStatusCode(400);
+        return $response;
+    }
+    $response->setStatusCode(200);
     return $response;
 });
 

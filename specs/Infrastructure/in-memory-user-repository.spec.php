@@ -83,4 +83,17 @@ describe('Project1\Infrastructure\InMemoryUserRepository', function () {
             expect($user)->to->be->a('NULL');
         });
     });
+    describe('->findByName("bill")', function () {
+        it('should return an array', function() {
+            $users = $this->repo->findByName(new StringLiteral('bill'));
+            expect($users)->to->be->an(array());
+        });
+    });
+    describe('->findByUsername("billharris")', function() {
+        it('should return a valid User object', function() {
+           $user = $this->repo->findByUsername(new StringLiteral('billharris'));
+           expect($user)->to->be->instanceof('Project1\Domain\User');
+           expect($user->getUsername()->equal(new StringLiteral('billharris')));
+        });
+    });
 });

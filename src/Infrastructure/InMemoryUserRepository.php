@@ -99,7 +99,17 @@ class InMemoryUserRepository implements UserRepository
      */
     public function findByName(StringLiteral $fragment)
     {
-        // TODO: Implement findByName() method
+        $users = [];
+        foreach($this->$this->storage as $user) {
+            if (strpos($fragment, $user->getName()) !== false) {
+                $users[] = $user;
+            }
+        }
+        if(empty($users)) {
+            return null;
+        }
+
+        return $users;
     }
 
     /**
@@ -108,7 +118,12 @@ class InMemoryUserRepository implements UserRepository
      */
     public function findByUsername(StringLiteral $username)
     {
-        // TODO: Implement findByUsername() method
+        foreach($this->storage as $user) {
+            if ($username->equal($user->getUsername())) {
+                return $user;
+            }
+        }
+        return null;
     }
 
     /**
