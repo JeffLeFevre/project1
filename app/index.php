@@ -231,6 +231,14 @@ function bootstrap()
         return new MysqlUserRepository($pdo);
     };
 
+    $dic['redis-client'] = function() {
+        return new Predis\Client([
+            'scheme' => 'tcp',
+            'host'   => 'redisserver',
+            'port'   => 6379,
+        ]);
+    };
+
     $dic['repo-mem'] = function() {
         $bill = new User(
             new StringLiteral('bill@email.com'),

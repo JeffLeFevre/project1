@@ -21,7 +21,8 @@
     "secure-http": false
   },
   "require": {
-    "silex/silex": "^2.0"
+    "silex/silex": "^2.0",
+    "predis/predis": "^1.1"
   },
   "require-dev": {
     "apigen/apigen": "^4.0",
