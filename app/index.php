@@ -86,7 +86,7 @@ $app->get('/ping', function() use ($dic) {
 
 $app->get('/users', function () use ($dic) {
     $response = new Response();
-    $repo = $dic['repo-mem'];
+    $repo = $dic['repo-mysql'];
     $response->setStatusCode(200);
     $response->setContent(json_encode($repo->findAll()));
 
@@ -95,7 +95,7 @@ $app->get('/users', function () use ($dic) {
 
 $app->get('/users/{id}', function ($id) use ($dic) {
     $response = new Response();
-    $repo = $dic['repo-mem'];
+    $repo = $dic['repo-mysql'];
     $user = $repo->findById(new StringLiteral($id));
     if ($user === null) {
         $response->setStatusCode(404);
@@ -111,7 +111,7 @@ $app->get('/users/{id}', function ($id) use ($dic) {
 
 $app->delete('/users/{id}', function ($id) use ($dic) {
     $response = new Response();
-    $repo = $dic['repo-mem'];
+    $repo = $dic['repo-mysql'];
     $result = $repo->delete(new StringLiteral($id))->save();
 
     if ($result === false) {
@@ -125,7 +125,7 @@ $app->delete('/users/{id}', function ($id) use ($dic) {
 
 $app->post('/users', function (Request $request) use ($dic) {
     $response = new Response();
-    $repo = $dic['repo-mem'];
+    $repo = $dic['repo-mysql'];
     $email = $request->get('email');
     $name = $request->get('name');
     $username = $request->get('username');
@@ -155,7 +155,7 @@ $app->post('/users', function (Request $request) use ($dic) {
 
 $app->put('/users/{id}', function ($id, Request $request) use ($dic) {
     $response = new Response();
-    $repo = $dic['repo-mem'];
+    $repo = $dic['repo-mysql'];
 
     $user = $repo->findById(new StringLiteral($id));
 
