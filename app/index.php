@@ -52,10 +52,12 @@ $app->before(function (Request $request) {
 });
 
 $app->get('/', function () {
-    return '<h1>Welcome to the Final Project</h1>';
+    return '<h1>Welcome to the Final Project</h1>\n
+            <h2>Deliverable 2!</h2>';
 });
 
 $app->get('/ping', function() use ($dic) {
+
    $response = new Response();
 
     $driver = $dic['db-driver'];
@@ -85,8 +87,11 @@ $app->get('/ping', function() use ($dic) {
 });
 
 $app->get('/users', function () use ($dic) {
-    $response = new Response();
+
     $repo = $dic['repo-mysql'];
+
+    $response = new Response();
+
     $response->setStatusCode(200);
     $response->setContent(json_encode($repo->findAll()));
 
@@ -94,9 +99,12 @@ $app->get('/users', function () use ($dic) {
 });
 
 $app->get('/users/{id}', function ($id) use ($dic) {
-    $response = new Response();
+
     $repo = $dic['repo-mysql'];
     $user = $repo->findById(new StringLiteral($id));
+
+    $response = new Response();
+
     if ($user === null) {
         $response->setStatusCode(404);
 
@@ -110,9 +118,11 @@ $app->get('/users/{id}', function ($id) use ($dic) {
 });
 
 $app->delete('/users/{id}', function ($id) use ($dic) {
-    $response = new Response();
+
     $repo = $dic['repo-mysql'];
-    $result = $repo->delete(new StringLiteral($id))->save();
+    $result = $repo->delete(new StringLiteral($id));
+
+    $response = new Response();
 
     if ($result === false) {
         $response->setStatusCode(500);
@@ -124,11 +134,13 @@ $app->delete('/users/{id}', function ($id) use ($dic) {
 });
 
 $app->post('/users', function (Request $request) use ($dic) {
-    $response = new Response();
+
     $repo = $dic['repo-mysql'];
     $email = $request->get('email');
     $name = $request->get('name');
     $username = $request->get('username');
+
+    $response = new Response();
 
     if(empty($email) || $email == "") {
         $response->setStatusCode(400);
@@ -145,56 +157,51 @@ $app->post('/users', function (Request $request) use ($dic) {
 
     $newUser = new User(new StringLiteral($email), new StringLiteral($name),
         new StringLiteral($username));
-    $newUser->setId(new StringLiteral('4'));
 
     $repo->add($newUser);
-    $response->setStatusCode(201);
 
+    $response->setStatusCode(201);
     return $response;
 });
 
 $app->put('/users/{id}', function ($id, Request $request) use ($dic) {
-    $response = new Response();
+
     $repo = $dic['repo-mysql'];
 
-    $user = $repo->findById(new StringLiteral($id));
+    $response = new Response();
 
+    $user = $repo->findById(new StringLiteral($id));
     if(empty($user) || $user == null) {
         $response->setStatusCode(400);
         return $response;
     }
 
-    if(!empty($request->get('email'))) {
-        $email = new StringLiteral($request->get('email'));
-        $name = $user->getName();
-        $username = $user->getUsername();
-        $newUser = new User($email,$name, $username);
-        $newUser->setId($user->getId());
-        $user = $newUser;
-        $repo->update($user);
-    }
-    elseif(!empty($request->get('name'))) {
-        $email = $user->getEmail();
-        $name = new StringLiteral($request->get('name'));
-        $username = $user->getUsername();
-        $newUser = new User($email,$name, $username);
-        $newUser->setId($user->getId());
-        $user = $newUser;
-        $repo->update($user);
-    }
-    elseif(!empty($request->get('username'))) {
-        $email = $user->getEmail();
-        $name = $user->getName();
-        $username = new StringLiteral($request->get('username'));
-        $newUser = new User($email,$name, $username);
-        $newUser->setId($user->getId());
-        $user = $newUser;
-        $repo->update($user);
-    }
-    else{
+    if(empty($request->get('email')) && empty($request->get('name')) &&
+            empty($request->get('username'))) {
         $response->setStatusCode(400);
         return $response;
     }
+    if(!empty($request->get('email'))) {
+        $email = new StringLiteral($request->get('email'));
+    }
+    else{
+        $email = $user->getEmail();
+    }
+    if(!empty($request->get('name'))) {
+        $name = new StringLiteral($request->get('name'));
+    }
+    else{
+        $name = $user->getName();
+    }
+    if(!empty($request->get('username'))) {
+        $username = new StringLiteral($request->get('username'));
+    }
+    else{
+        $username = $user->getUsername();
+    }
+    $newUser = new User($email, $name, $username);
+    $newUser->setId($user->getId());
+    $repo->update($newUser);
     $response->setStatusCode(200);
     return $response;
 });

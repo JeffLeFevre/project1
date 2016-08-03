@@ -41,41 +41,72 @@ class MysqlUserRepository implements UserRepository
         $this->driver = $driver;
     }
 
-    private function execSqlNoReturn(String $query)
+    // For returning responses from the DB (SELECT)
+    /**
+     * @param String $query
+     * @param bool $all
+     */
+    private function fetchSelect(String $query, bool $all)
     {
+        $result = [];
         try {
-            $this->driver->exec($query);
-        } catch (\PDOException $e) {
-            if ($e->getCode() === 1062) {
-                // Take some action if there is a key constraint violation, i.e. duplicate name
-            } else {
-                throw $e;
-            }
-        }
-    }
 
-    private function execSqlWithReturn(String $query)
-    {
-        try {
-            $stmt = $this->driver->prepare($query);
-            $stmt->execute();
-            $result = $stmt->setFetchMode(\PDO::FETCH_ASSOC);
+            $sql = $this->driver->query($query);
+            if($all){
+                $result = $sql->fetchAll();
+            }
+            else{
+                $result = $sql->fetch();
+            }
+
         } catch (\PDOException $e) {
+
             if ($e->getCode() === 1062) {
-                // Take some action if there is a key constraint violation, i.e. duplicate name
+                //not sure here either
+                return;
             } else {
                 throw $e;
             }
         }
+        
         return $result;
     }
 
-    private function createUserOrArray(String $query, bool $create)
+    // This is for any SQL that isn't going to return something from the DB
+    /**
+     * @param String $query
+     */
+    private function runSql(String $query)
     {
-        $result = $this->execSqlWithReturn($query);
-        if($create) {
-            $user = new User(new StringLiteral($result["user_name"]),
-                new StringLiteral($result["name"]), new StringLiteral($result["email"]));
+        try {
+
+            $this->driver->exec($query);
+
+        } catch (\PDOException $e) {
+
+            if ($e->getCode() === 1062) {
+                //not sure what to do here
+                return;
+            } else {
+                throw $e;
+            }
+        }
+
+    }
+
+    // Can return either an array or a user based on the bool value
+    /**
+     * @param String $query
+     * @param bool $arr
+     * @return array|mixed|User|void
+     */
+    private function getUserData(String $query, bool $arr)
+    {
+        $result = $this->fetchSelect($query, false);
+        if(!$arr) {
+            $user = new User(new StringLiteral($result["email"]),
+                new StringLiteral($result["name"]), new StringLiteral($result["user_name"]));
+            $user->setId($result["id"]);
             return $user;
         }
         return $result;
@@ -89,7 +120,10 @@ class MysqlUserRepository implements UserRepository
     public function add(User $user)
     {
         $data = json_decode(json_encode($user));
-        $this->execSqlNoReturn('INSERT INTO user (user_name, name, email) VALUES ('.$data["username"].','.$data["name"].','.$data["email"].');');
+        $this->runSql(
+            'INSERT INTO Users (user_name, name, email) VALUES ("' .$data->username.'", 
+                "'.$data->name.'", "'.$data->email.'");'
+        );
         return $this;
     }
 
@@ -99,7 +133,7 @@ class MysqlUserRepository implements UserRepository
      */
     public function delete(StringLiteral $id)
     {
-        $this->execSqlNoReturn('DELETE FROM user WHERE id = '.$id.';');
+        $this->runSql('DELETE FROM Users WHERE id = ' .$id.';');
     }
 
     /**
@@ -107,7 +141,7 @@ class MysqlUserRepository implements UserRepository
      */
     public function findAll()
     {
-        $all = $this->execSqlWithReturn("SELECT * FROM user");
+        $all = $this->fetchSelect('SELECT * FROM Users', true);
         return json_encode($all);
     }
 
@@ -117,8 +151,8 @@ class MysqlUserRepository implements UserRepository
      */
     public function findByEmail(StringLiteral $fragment)
     {
-        $query = 'SELECT id, email, name, user_name FROM user WHERE email = '.$fragment.';';
-        return $this->createUserOrArray($query, false);
+        $query = 'SELECT id, email, name, user_name FROM Users WHERE email = "' .$fragment.'";';
+        return $this->getUserData($query, true);
     }
 
     /**
@@ -127,8 +161,9 @@ class MysqlUserRepository implements UserRepository
      */
     public function findById(StringLiteral $id)
     {
-        $query = 'SELECT id, email, name, user_name FROM user WHERE id = '.$id.';';
-        return $this->createUserOrArray($query, true);
+        $query = 'SELECT id, email, name, user_name FROM Users WHERE id = ' .(string) $id.';';
+        echo "";
+        return $this->getUserData($query, false);
     }
 
     /**
@@ -137,8 +172,8 @@ class MysqlUserRepository implements UserRepository
      */
     public function findByName(StringLiteral $fragment)
     {
-        $query = 'SELECT id, email, name, user_name FROM user WHERE name = '.$fragment.';';
-        return $this->createUserOrArray($query, false);
+        $query = 'SELECT id, email, name, user_name FROM Users WHERE name = ' .$fragment.';';
+        return $this->getUserData($query, true);
     }
 
     /**
@@ -147,8 +182,8 @@ class MysqlUserRepository implements UserRepository
      */
     public function findByUsername(StringLiteral $username)
     {
-        $query = 'SELECT id, email, name, user_name FROM user WHERE user_name = '.$username.';';
-        return $this->createUserOrArray($query, false);
+        $query = 'SELECT id, email, name, user_name FROM Users WHERE user_name = ' .$username.';';
+        return $this->getUserData($query, true);
     }
 
     /**
@@ -156,6 +191,7 @@ class MysqlUserRepository implements UserRepository
      */
     public function save()
     {
+        // Since stuff is auto-committed to the DB I don't think this is used.
         return true;
     }
 
@@ -165,7 +201,10 @@ class MysqlUserRepository implements UserRepository
      */
     public function update(User $user)
     {
-        $this->delete($user->getId());
-        $this->add($user);
+        $query = 'UPDATE Users SET email="' .$user->getEmail().'",
+        name="'.$user->getName().'", user_name="'.$user->getUsername().'" 
+        WHERE id='.$user->getId().';';
+
+        return $this->runSql($query);
     }
 }
