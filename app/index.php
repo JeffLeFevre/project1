@@ -18,6 +18,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Pimple\Container;
 use Project1\Infrastructure\InMemoryUserRepository;
 use Project1\Infrastructure\MysqlUserRepository;
+use Project1\Infrastructure\RedisUserRepository;
 use Project1\Domain\StringLiteral;
 use Project1\Domain\User;
 
@@ -87,11 +88,9 @@ $app->get('/ping', function() use ($dic) {
 });
 
 $app->get('/users', function () use ($dic) {
-
-    $repo = $dic['repo-mysql'];
+    $repo = $dic['repo-redis'];
 
     $response = new Response();
-
     $response->setStatusCode(200);
     $response->setContent(json_encode($repo->findAll()));
 
@@ -100,7 +99,7 @@ $app->get('/users', function () use ($dic) {
 
 $app->get('/users/{id}', function ($id) use ($dic) {
 
-    $repo = $dic['repo-mysql'];
+    $repo = $dic['repo-redis'];
     $user = $repo->findById(new StringLiteral($id));
 
     $response = new Response();
@@ -119,7 +118,7 @@ $app->get('/users/{id}', function ($id) use ($dic) {
 
 $app->delete('/users/{id}', function ($id) use ($dic) {
 
-    $repo = $dic['repo-mysql'];
+    $repo = $dic['repo-redis'];
     $result = $repo->delete(new StringLiteral($id));
 
     $response = new Response();
@@ -135,7 +134,7 @@ $app->delete('/users/{id}', function ($id) use ($dic) {
 
 $app->post('/users', function (Request $request) use ($dic) {
 
-    $repo = $dic['repo-mysql'];
+    $repo = $dic['repo-redis'];
     $email = $request->get('email');
     $name = $request->get('name');
     $username = $request->get('username');
@@ -157,16 +156,16 @@ $app->post('/users', function (Request $request) use ($dic) {
 
     $newUser = new User(new StringLiteral($email), new StringLiteral($name),
         new StringLiteral($username));
-
+    $id = uniqid();
+    $newUser->setId(new StringLiteral($id));
     $repo->add($newUser);
-
     $response->setStatusCode(201);
     return $response;
 });
 
 $app->put('/users/{id}', function ($id, Request $request) use ($dic) {
 
-    $repo = $dic['repo-mysql'];
+    $repo = $dic['repo-redis'];
 
     $response = new Response();
 
@@ -233,11 +232,6 @@ function bootstrap()
         return new PDO($dsn, $user, $pass, $opt);
     };
 
-    $pdo = $dic['db-driver'];
-    $dic['repo-mysql'] = function() use ($pdo) {
-        return new MysqlUserRepository($pdo);
-    };
-
     $dic['redis-client'] = function() {
         return new Predis\Client([
             'scheme' => 'tcp',
@@ -245,6 +239,16 @@ function bootstrap()
             'port'   => 6379,
         ]);
     };
+
+    $pdo = $dic['redis-client'];
+    $dic['repo-redis'] = function() use ($pdo) {
+        return new RedisUserRepository($pdo);
+    };
+
+//    $pdo = $dic['db-driver'];
+//    $dic['repo-mysql'] = function() use ($pdo) {
+//        return new MysqlUserRepository($pdo);
+//    };
 
     $dic['repo-mem'] = function() {
         $bill = new User(

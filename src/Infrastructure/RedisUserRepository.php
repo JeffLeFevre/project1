@@ -32,7 +32,6 @@ class RedisUserRepository implements UserRepository
 {
     /** @var \Predis\Client() */
     protected $client;
-
     /**
      * RedisUserRepository constructor
      * @param \Predis\Client $newClient
@@ -67,7 +66,10 @@ class RedisUserRepository implements UserRepository
      */
     public function findAll()
     {
-        // TODO: Implement findAll() method
+        foreach($this->client->keys('*') as $key){
+            $data[$key] = json_decode($this->client->get($key), true);
+        }
+        return $data;
     }
 
     /**
@@ -76,7 +78,7 @@ class RedisUserRepository implements UserRepository
      */
     public function findByEmail(StringLiteral $fragment)
     {
-        // TODO: Implement findByEmail() method
+        return $this->client->get($fragment->toNative());
     }
 
     /**
@@ -88,15 +90,14 @@ class RedisUserRepository implements UserRepository
     {
         /** @var string $json */
         $json = $this->client->get($id->toNative());
-
         $data = json_decode($json, true);
 
         $user = new User(
-            new StringLiteral($data->email),
-            new StringLiteral($data->name),
-            new StringLiteral($data->username)
+            new StringLiteral($data['email']),
+            new StringLiteral($data['name']),
+            new StringLiteral($data['username'])
         );
-        $user->setId($data->id);
+        $user->setId($data['id']);
 
         return $user;
     }
@@ -107,7 +108,7 @@ class RedisUserRepository implements UserRepository
      */
     public function findByName(StringLiteral $fragment)
     {
-        // TODO: Implement findByName() method
+        return json_decode($this->client->get($fragment->toNative()));
     }
 
     /**
@@ -116,7 +117,7 @@ class RedisUserRepository implements UserRepository
      */
     public function findByUsername(StringLiteral $username)
     {
-        // TODO: Implement findByUsername() method
+        return json_decode($this->client->get($username->toNative()));
     }
 
     /**
@@ -133,7 +134,8 @@ class RedisUserRepository implements UserRepository
      */
     public function update(User $user)
     {
-        $this->delete($user->getId());
+        $this->delete(new StringLiteral($user->getId()));
+        $user->setId(new StringLiteral(uniqid()));
         $this->add($user);
         return $this;
     }
