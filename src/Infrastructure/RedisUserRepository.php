@@ -91,7 +91,6 @@ class RedisUserRepository implements UserRepository
         /** @var string $json */
         $json = $this->client->get($id->toNative());
         $data = json_decode($json, true);
-
         $user = new User(
             new StringLiteral($data['email']),
             new StringLiteral($data['name']),
@@ -134,9 +133,12 @@ class RedisUserRepository implements UserRepository
      */
     public function update(User $user)
     {
-        $this->delete(new StringLiteral($user->getId()));
-        $user->setId(new StringLiteral(uniqid()));
-        $this->add($user);
+        echo "Redis update called\n";
+        $userdata = array(json_decode($this->client->get($user->getId())));
+        $userdata['email'] = $user->getEmail();
+        $userdata['name'] = $user->getName();
+        $userdata['username'] = $user->getUsername();
+        $this->client->mset($user->getId(), json_encode($userdata));
         return $this;
     }
 }

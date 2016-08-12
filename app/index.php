@@ -89,10 +89,13 @@ $app->get('/ping', function() use ($dic) {
 
 $app->get('/users', function () use ($dic) {
     $repo = $dic['repo-redis'];
-
+    $r2 = $dic['repo-mysql'];
     $response = new Response();
     $response->setStatusCode(200);
-    $response->setContent(json_encode($repo->findAll()));
+    $rdata = [];
+    $rdata['sql'] = json_decode($r2->findAll());
+    $rdata['redis'] = $repo->findAll();
+    $response->setContent(json_encode($rdata));
 
     return $response;
 });
@@ -100,8 +103,9 @@ $app->get('/users', function () use ($dic) {
 $app->get('/users/{id}', function ($id) use ($dic) {
 
     $repo = $dic['repo-redis'];
-    $user = $repo->findById(new StringLiteral($id));
-
+    $repo2 = $dic['repo-mysql'];
+    $user = $repo2->findById(new StringLiteral($id));
+    $ured = $repo->findById(new StringLiteral($id));
     $response = new Response();
 
     if ($user === null) {
@@ -109,7 +113,10 @@ $app->get('/users/{id}', function ($id) use ($dic) {
 
         return $response;
     }
-
+    $rdata = [];
+    $rdata['sql'] = $user;
+    $rdata['redis'] = $ured;
+    $response->setContent(json_encode($rdata));
     $response->setStatusCode(200);
     $response->setContent(json_encode($user));
 
@@ -119,13 +126,18 @@ $app->get('/users/{id}', function ($id) use ($dic) {
 $app->delete('/users/{id}', function ($id) use ($dic) {
 
     $repo = $dic['repo-redis'];
+    $repo2 = $dic['repo-mysql'];
     $result = $repo->delete(new StringLiteral($id));
-
+    $r2 = $repo2->delete(new StringLiteral($id));
     $response = new Response();
 
-    if ($result === false) {
+    if ($result === false || $r2 === false) {
         $response->setStatusCode(500);
     } else {
+        $rdata = [];
+        $rdata['sql'] = $result;
+        $rdata['redis'] = $r2;
+        $response->setContent(json_encode($rdata));
         $response->setStatusCode(200);
     }
 
@@ -135,6 +147,7 @@ $app->delete('/users/{id}', function ($id) use ($dic) {
 $app->post('/users', function (Request $request) use ($dic) {
 
     $repo = $dic['repo-redis'];
+    $repo2 = $dic['repo-mysql'];
     $email = $request->get('email');
     $name = $request->get('name');
     $username = $request->get('username');
@@ -159,6 +172,7 @@ $app->post('/users', function (Request $request) use ($dic) {
     $id = uniqid();
     $newUser->setId(new StringLiteral($id));
     $repo->add($newUser);
+    $repo2->add($newUser);
     $response->setStatusCode(201);
     return $response;
 });
@@ -166,11 +180,13 @@ $app->post('/users', function (Request $request) use ($dic) {
 $app->put('/users/{id}', function ($id, Request $request) use ($dic) {
 
     $repo = $dic['repo-redis'];
-
+    $repo2 = $dic['repo-mysql'];
     $response = new Response();
 
-    $user = $repo->findById(new StringLiteral($id));
-    if(empty($user) || $user == null) {
+    $user = $repo2->findById(new StringLiteral($id));
+    if(empty($user) || $user === null) {
+        $rinfo = "User ID not found.";
+        $response->setContent($rinfo);
         $response->setStatusCode(400);
         return $response;
     }
@@ -201,6 +217,7 @@ $app->put('/users/{id}', function ($id, Request $request) use ($dic) {
     $newUser = new User($email, $name, $username);
     $newUser->setId($user->getId());
     $repo->update($newUser);
+    $repo2->update($newUser);
     $response->setStatusCode(200);
     return $response;
 });
@@ -245,10 +262,10 @@ function bootstrap()
         return new RedisUserRepository($pdo);
     };
 
-//    $pdo = $dic['db-driver'];
-//    $dic['repo-mysql'] = function() use ($pdo) {
-//        return new MysqlUserRepository($pdo);
-//    };
+    $pdo = $dic['db-driver'];
+    $dic['repo-mysql'] = function() use ($pdo) {
+        return new MysqlUserRepository($pdo);
+    };
 
     $dic['repo-mem'] = function() {
         $bill = new User(

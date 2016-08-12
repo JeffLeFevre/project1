@@ -68,7 +68,6 @@ class MysqlUserRepository implements UserRepository
                 throw $e;
             }
         }
-        
         return $result;
     }
 
@@ -121,7 +120,7 @@ class MysqlUserRepository implements UserRepository
     {
         $data = json_decode(json_encode($user));
         $this->runSql(
-            'INSERT INTO Users (user_name, name, email) VALUES ("' .$data->username.'", 
+            'INSERT INTO Users (id, username, name, email) VALUES ("'.$data->id.'", "'.$data->username.'", 
                 "'.$data->name.'", "'.$data->email.'");'
         );
         return $this;
@@ -151,7 +150,7 @@ class MysqlUserRepository implements UserRepository
      */
     public function findByEmail(StringLiteral $fragment)
     {
-        $query = 'SELECT id, email, name, user_name FROM Users WHERE email = "' .$fragment.'";';
+        $query = 'SELECT id, email, name, username FROM Users WHERE email = "' .$fragment.'";';
         return $this->getUserData($query, true);
     }
 
@@ -161,8 +160,7 @@ class MysqlUserRepository implements UserRepository
      */
     public function findById(StringLiteral $id)
     {
-        $query = 'SELECT id, email, name, user_name FROM Users WHERE id = ' .(string) $id.';';
-        echo "";
+        $query = 'SELECT id, email, name, username FROM Users WHERE id="' .(string) $id.'";';
         return $this->getUserData($query, false);
     }
 
@@ -172,7 +170,7 @@ class MysqlUserRepository implements UserRepository
      */
     public function findByName(StringLiteral $fragment)
     {
-        $query = 'SELECT id, email, name, user_name FROM Users WHERE name = ' .$fragment.';';
+        $query = 'SELECT id, email, name, username FROM Users WHERE name = ' .$fragment.';';
         return $this->getUserData($query, true);
     }
 
@@ -182,7 +180,7 @@ class MysqlUserRepository implements UserRepository
      */
     public function findByUsername(StringLiteral $username)
     {
-        $query = 'SELECT id, email, name, user_name FROM Users WHERE user_name = ' .$username.';';
+        $query = 'SELECT id, email, name, username FROM Users WHERE username = ' .$username.';';
         return $this->getUserData($query, true);
     }
 
@@ -202,8 +200,8 @@ class MysqlUserRepository implements UserRepository
     public function update(User $user)
     {
         $query = 'UPDATE Users SET email="' .$user->getEmail().'",
-        name="'.$user->getName().'", user_name="'.$user->getUsername().'" 
-        WHERE id='.$user->getId().';';
+        name="'.$user->getName().'", username="'.$user->getUsername().'" 
+        WHERE id="'.$user->getId().'";';
 
         return $this->runSql($query);
     }
